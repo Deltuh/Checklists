@@ -8,7 +8,6 @@
 import UIKit
 
 class ChecklistViewController: UITableViewController, ItemDetailViewControllerDelegate {
-    var items = [ChecklistItem] ()
     var checklist: Checklist!
     
     override func viewDidLoad() {
@@ -16,10 +15,6 @@ class ChecklistViewController: UITableViewController, ItemDetailViewControllerDe
         
         // Enabling large titles
         navigationItem.largeTitleDisplayMode = .never
-        
-        // Load items
-        loadChecklistItems()
-        
         title = checklist.name
     }
     
@@ -30,19 +25,15 @@ class ChecklistViewController: UITableViewController, ItemDetailViewControllerDe
     )   {
         // Give each segue a unique identifier to handle the correct segue
         if segue.identifier == "AddItem" {
-
-            //
             let controller = segue.destination as! ItemDetailViewController
-            // 3
             controller.delegate = self
-            
     }   else if segue.identifier == "EditItem" {
         let controller = segue.destination as! ItemDetailViewController
         controller.delegate = self
         
         if let indexPath = tableView.indexPath(
             for: sender as! UITableViewCell) {
-            controller.itemToEdit = items[indexPath.row]
+            controller.itemToEdit = checklist.items[indexPath.row]
         }
     }        
 }
@@ -61,7 +52,7 @@ class ChecklistViewController: UITableViewController, ItemDetailViewControllerDe
     }
 }
     
-    // Sets the checlist item's text on the cell's label
+    // Sets the checklist item's text on the cell's label
     func configureText (
         for cell: UITableViewCell,
         with item: ChecklistItem
@@ -70,51 +61,12 @@ class ChecklistViewController: UITableViewController, ItemDetailViewControllerDe
         label.text = item.text
     }
     
-    
-    func documentsDirectory()-> URL {
-        let paths = FileManager.default.urls(
-            for: .documentDirectory,
-               in: .userDomainMask)
-        return paths[0]
-    }
-
-    func dataFilePath() -> URL {
-        return
-        documentsDirectory().appendingPathComponent("Checklists.plist")
-    }
-    
-    func saveChecklistItems() {
-        let encoder = PropertyListEncoder()
-        do {
-            let data = try encoder.encode(items)
-            try data.write(
-                to: dataFilePath(),
-                options: Data.WritingOptions.atomic)
-        }   catch {
-            print("Error encoding item array: \(error.localizedDescription)")
-        }
-    }
-    
-    func loadChecklistItems() {
-        let path = dataFilePath()
-        if let data = try? Data(contentsOf: path) {
-            let decoder = PropertyListDecoder()
-            do {
-                items = try decoder.decode(
-                    [ChecklistItem].self,
-                    from: data)
-            }   catch {
-                print("Error decoding item array: \(error.localizedDescription)")
-            }
-        }
-    }
-    
     // MARK: - Table View Data Source
     override func tableView(
         _ tableView: UITableView,                            // parameter 1
         numberOfRowsInSection section: Int                   // parameter 2
     )   -> Int {                                             // return value
-        return items.count
+        return checklist.items.count
     }
     
     override func tableView(
@@ -125,7 +77,7 @@ class ChecklistViewController: UITableViewController, ItemDetailViewControllerDe
             withIdentifier: "ChecklistItem",
             for: indexPath)
     
-        let item = items[indexPath.row]
+        let item = checklist.items[indexPath.row]
         
         configureText(for: cell, with: item)
         configureCheckmark(for: cell, with: item)
@@ -139,14 +91,13 @@ class ChecklistViewController: UITableViewController, ItemDetailViewControllerDe
         didSelectRowAt indexPath: IndexPath                  // parameter 2
     )   {
         if let cell = tableView.cellForRow(at: indexPath) {
-            let item = items[indexPath.row]
+            let item = checklist.items[indexPath.row]
             item.checked.toggle()
             
             configureCheckmark(for: cell, with: item)
         }
         
         tableView.deselectRow(at: indexPath, animated: true) // One of the table view delegate methods are called when the user taps on a cell
-        saveChecklistItems()
     }
         
     override func tableView(
@@ -155,12 +106,10 @@ class ChecklistViewController: UITableViewController, ItemDetailViewControllerDe
         forRowAt indexPath: IndexPath
     )   {
         // Swipe to delete
-        items.remove(at: indexPath.row)
+        checklist.items.remove(at: indexPath.row)
         
         let indexPaths = [indexPath]
         tableView.deleteRows(at: indexPaths, with: .automatic)
-        
-        saveChecklistItems()
     }
 
     // MARK: - Add Item Viewcontroller Delegates
@@ -176,26 +125,26 @@ class ChecklistViewController: UITableViewController, ItemDetailViewControllerDe
         _ controller: ItemDetailViewController,
         didFinishAdding item: ChecklistItem
     )   {
-        let newRowIndex = items.count
-        items.append(item)
+        let newRowIndex = checklist.items.count
+        checklist.items.append(item)
         
         let indexPath = IndexPath(row: newRowIndex, section: 0)
         let indexPaths = [indexPath]
         tableView.insertRows(at: indexPaths, with: .automatic)
         navigationController?.popViewController(animated: true)
         
-        saveChecklistItems()
+        
     }
     func itemDetailViewController(
         _ controller: ItemDetailViewController,
         didFinishEditing item: ChecklistItem
     )   {
-        if let index = items.firstIndex(of: item) {
+        if let index = checklist.items.firstIndex(of: item) {
             let indexPath = IndexPath(row: index, section: 0)
             if let cell = tableView.cellForRow(at: indexPath) {
                 configureText(for: cell, with: item)
             }
-        saveChecklistItems()
+        
     }
         navigationController?.popViewController(animated: true)
     }

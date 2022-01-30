@@ -25,21 +25,23 @@ class ItemDetailViewController: UITableViewController, UITextFieldDelegate {
 
     @IBOutlet weak var textField: UITextField!
     @IBOutlet weak var doneBarButton: UIBarButtonItem!
+    @IBOutlet weak var shouldRemindSwitch: UISwitch!
+    @IBOutlet weak var datePicker: UIDatePicker!
     
     weak var delegate: ItemDetailViewControllerDelegate?
     var itemToEdit: ChecklistItem?
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+        // Disabling large titles
+        navigationItem.largeTitleDisplayMode = .never
         if let item = itemToEdit {
             title = "Edit Item"
             textField.text = item.text
             doneBarButton.isEnabled = true
+            shouldRemindSwitch.isOn = item.shouldRemind
+            datePicker.date = item.dueDate
         }
-        
-        // Disabling large titles
-        navigationItem.largeTitleDisplayMode = .never
     }
     
     // Keyboard automatically shows up when the screen opens
@@ -61,13 +63,31 @@ class ItemDetailViewController: UITableViewController, UITextFieldDelegate {
     @IBAction func done() {
         if let item = itemToEdit {
             item.text = textField.text!
+            item.shouldRemind = shouldRemindSwitch.isOn
+            item.dueDate = datePicker.date
+            item.scheduleNotification()
+            
             delegate?.itemDetailViewController(
                 self,
                 didFinishEditing: item)
         }   else {
             let item = ChecklistItem()
             item.text = textField.text!
+            item.shouldRemind = shouldRemindSwitch.isOn
+            item.dueDate = datePicker.date
+            item.scheduleNotification()
+            
             delegate?.itemDetailViewController(self, didFinishAdding: item)
+        }
+    }
+    
+    @IBAction func shouldRemindToggled(_ switchControl: UISwitch) {
+        textField.resignFirstResponder()
+        
+        if switchControl.isOn {
+            let center = UNUserNotificationCenter.current()
+            center.requestAuthorization(options: [.alert, .sound]) {_, _ in
+            }
         }
     }
     
@@ -90,7 +110,11 @@ override func tableView(
         let newText = oldText.replacingCharacters(
             in: stringRange,
             with: string)
-        doneBarButton.isEnabled = !newText.isEmpty
+        if newText.isEmpty {
+            doneBarButton.isEnabled = false
+        }   else {
+            doneBarButton.isEnabled = true
+        }
         return true
     }
     
@@ -99,6 +123,4 @@ override func tableView(
         doneBarButton.isEnabled = false
         return true
     }
-
-    
 }
